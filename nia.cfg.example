@@ -1,0 +1,8 @@
+[general]
+confs = testdesu@conference.jabber.ru,botzone@conference.jabber.ru
+jid = bot@jabber.ru/Resource
+passwd = <your passwd>
+ignore = User1,user2
+nick = Bot
+admin = admin@jabber.com
+
