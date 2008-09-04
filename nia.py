@@ -1,12 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+'''
+Nia - бот написаный на Python.
+Разработчик - apkawa@gmail.com
+
+некоторые идеи были взяты из:
+    http://paste.org.ru/?ffxty8
+    http://paste.org.ru/?9iuvw2
+
+Лицензия - GPL v.3
+'''
 from jaconn import bot
 import re,sys,os,time
 from random import randint
-'''
-http://paste.org.ru/?ffxty8
-http://paste.org.ru/?9iuvw2
-'''
 
 class Nia(bot):
     def send(self, flag, text, extra=None):
@@ -41,7 +47,6 @@ class Nia(bot):
         Translated text into another language.
         en - English
         ru - Russian
-        uk - Ukrainian
         ja - Japan
         zn - Chinese
         ko - Korean
@@ -53,6 +58,7 @@ class Nia(bot):
         hi - Hindi
         sa - Sanskrit
         '''
+
         tmp = re.findall('([\w]{2})[\s]*?([\w]{2})[\s]*?(.*?)$',args)
         if tmp:
             tmp = tmp[0]
@@ -141,7 +147,7 @@ class Nia(bot):
 
     def admin_leave(self,nick,conf):
         '''Usage: leave example@conference.example.com
-        Exit the room. Without arguments - to emerge from the current room.Выйти из комнаты.'''
+        Exit the room. Without arguments - to emerge from the current room.'''
         if not conf:
             conf = '%s@%s'%(nick.getNode(),nick.getDomain())
         to = '%s/%s'%(conf,self.NICK)
@@ -295,6 +301,7 @@ def translated(word,  to_l, from_l=None):
 
 
 #user, confs, ignore = Nia.config(False,None,None)
-nia = Nia()
-nia.online()
+if __name__ == '__main__':
+    nia = Nia()
+    nia.online()
 

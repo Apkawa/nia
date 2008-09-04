@@ -18,7 +18,7 @@ class bot:
 
         self.resource= 'Nia Teppelin'
         self.version = '0.666'
-        self.os = 'Windows Vista'
+        self.os = '.NET Windows Vista'
         self.help = {'com':[],'admin':[]}
         for (name, value) in inspect.getmembers(self):
 #            print name, value
@@ -66,10 +66,18 @@ class bot:
         self.conn.auth(self.jid.getNode(),self.PASSWD,'nyaa~')
         self.conn.sendInitPresence()
         self.conn.RegisterHandler('message',self.get_mes)
-#        self.conn.RegisterHandler('iq',self.get_iq)
-#        self.conn.RegisterHandler('iq', self.version, typ='get', ns=xmpp.NS_VERSION)
-#        self.conn.RegisterHandler('iq',self.version,'get',xmpp.NS_VERSION)
-#        self.conn.RegisterHandler('presence', self.presence)
+        self.conn.RegisterHandler('iq', self.version, typ='get',\
+                                 ns=xmpp.NS_VERSION)
+
+    def version(self, conn, iq):
+        """Returns reply to iq:version"""
+        iq=iq.buildReply('result')
+        qp=iq.getTag('query')
+        qp.setTagData('name', self.resource)
+        qp.setTagData('version', self.version)
+        qp.setTagData('os', self.os)
+        conn.send(iq)
+        raise xmpp.NodeProcessed
  
     def join_room(self, confs):
         for conf in confs:
@@ -100,12 +108,14 @@ class bot:
         to - кому отправляем
         text - отправляемый текст'''
         self.conn.send(xmpp.protocol.Message(to,text,type))
+
     def send_system(self,to,msg,type):
         '''Отправка системного сообщения. Статусы'''
         print to, msg, type
         self.conn.send(xmpp.protocol.Presence(to=to,status=msg,typ=type))
     def XMLescape(self, text):
         return xmpp.simplexml.XMLescape(text)
+
     def send_xml(self,type,to,text,extra):
         '''Отправка сообщения в форме xhtml'''
         xhtml = '''
@@ -193,15 +203,6 @@ class bot:
         '''
 
 
-
-    def version(self,conn,mess):
-        iq=mess.buildReply('result')
-        iq.getTag('query').setTagData('name','Niabot')
-        iq.getTag('query').setTagData('version','0.6.9')
-        #iq.getTag('query').setTagData('os','Windows Vista Ultimate')
-        conn.send(iq)
-    def presence(self,conn,presence):
-        pass
 
 
 
