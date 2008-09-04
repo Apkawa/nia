@@ -65,11 +65,11 @@ class bot:
         self.conn.connect()
         self.conn.auth(self.jid.getNode(),self.PASSWD,'nyaa~')
         self.conn.sendInitPresence()
+        self.conn.RegisterDisconnectHandler(self.conn.reconnectAndReauth)
         self.conn.RegisterHandler('message',self.get_mes)
-        self.conn.RegisterHandler('iq', self.version, typ='get',\
-                                 ns=xmpp.NS_VERSION)
+        self.conn.RegisterHandler('iq', self.iq_version, typ='get', ns=xmpp.NS_VERSION)
 
-    def version(self, conn, iq):
+    def iq_version(self, conn, iq):
         """Returns reply to iq:version"""
         iq=iq.buildReply('result')
         qp=iq.getTag('query')
