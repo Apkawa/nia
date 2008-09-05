@@ -127,66 +127,47 @@ class bot:
         
         self.conn.send("<message to='%s' type='%s'><body>%s</body>%s</message>"%(to,type,text,xhtml))
 
-    def get_mes(self,conn,mess):
-        ''' Получение сообщений и обработка'''
+    def get_mes(self, conn, mess):
+        def parse():
+            text = re.findall('^%s[\W]{0,2}[\s]{1,3}(.*?)$'%self.NICK,self.text)
+            print text
+            if text:
+                tmp = text[0].split(' ',1)
+                if len(tmp) >= 2: cmd, args = tmp[0], tmp[1]
+                elif len(tmp) == 1: cmd, args = tmp[0], ''
+                return cmd, args
+            else: return False, False
+
         self.type=mess.getType()
         self.nick=mess.getFrom()
         self.text=mess.getBody()
-        #print self.type.encode('utf-8'), self.nick.encode('utf-8'), self.text.encode('utf-8')
-        if self.ignore.count(self.nick.getResource()):
-            pass
-        elif self.type == 'groupchat':
-            if re.match('^%s[\W]'%self.NICK, self.text):
-                self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
-                nick = self.nick.getResource()
-                text = re.findall('^%s[\W]{0,2}[\s]{1,3}(.*?)$'%self.NICK,self.text)[0]
+        print self.type, self.nick, self.text
 
-                tmp = text.split(' ',1)
-                if len(tmp) >= 2:
-                    cmd = tmp[0]
-                    args = tmp[1]
-                elif len(tmp) == 1:
-                    cmd = tmp[0]
-                    args = ''
 
+        if self.type == 'groupchat':
+            self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
+            nick = self.nick.getResource()
+        elif self.type == 'chat' and re.match('conference.[\w]*?.[\w]{2,3}', self.nick.getDomain()):
+            self.to = self.nick
+            nick = self.nick.getResource()
+        elif self.type == 'chat':
+            self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
+            nick = self.nick.getNode()
+
+
+        if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),str(self.nick).encode('utf-8')):
+            pass        
+        elif re.match('^%s[\W]'%self.NICK, self.text):
+            cmd, args = parse()
+            if cmd:
                 if self.commands.has_key(cmd):
-                    '''
-                    True - chat
-                    False - xml
-                    '''
-                    result = self.commands[cmd](args)
-                    '''
-                    if result[0]:
-                        text = result[1]
-                        self.send_chat(self.type,to,text)
-                    else:
-                        text,extra = result[1],result[2]
-                        self.send_xml(self.type, to, text, extra)
-                    '''
+                    self.commands[cmd](args)
                 elif self.admin_commands.has_key(cmd):
-                    if nick == self.admin.getNode():
-                        result = self.admin_commands[cmd](self.nick,args)
-                        if result:
-                            text = result
-                            self.send_chat(self.type,self.to,text)
-                        else: pass
+                    if nick == self.admin.getNode() or self.to == str(self.admin).lower() :
+                        self.admin_commands[cmd](self.nick,args)
                     else: self.send_chat(self.type, self.to, '%s~ nyaaa? Access denied...'%nick)
                 else:  self.send_chat(self.type, self.to, '%s~ nyaaa? Type "help"...'%nick)
-            else: return
-
-        elif self.type == 'chat':
-            if '%s@%s'%(self.nick.getNode(),self.nick.getDomain()) == self.admin:
-                tmp = self.text.split(' ',1)
-                print tmp
-                if len(tmp) >= 2:
-                    cmd = tmp[0]
-                    args = tmp[1]
-                elif len(tmp) == 1:
-                    cmd = tmp[0]
-                    args = ''
-                print cmd, args
-                if self.admin_commands.has_key(cmd):
-                    self.admin_commands[cmd](args)
+            else:  self.send_chat(self.type, self.to, '%s~ nyaaa? Type "help"...'%nick)
 
 
     def send_iq(self,_type, to):

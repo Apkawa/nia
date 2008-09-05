@@ -15,7 +15,7 @@ import re,sys,os,time
 from random import randint
 
 class Nia(bot):
-    def send(self, flag, text, extra=None):
+    def send(self, text, extra=None, flag=True):
         '''
         True - chat
         False - xml
@@ -32,14 +32,14 @@ class Nia(bot):
                 halp = self.commands[args].__doc__
             elif self.admin_commands.has_key(args):
                 halp = self.admin_commands[args].__doc__
-            self.send(True, halp)
+            self.send(halp)
         halp ='''List of functions
         User command: %s
         Master command: %s
 
         Type help <command> to learn more
         '''%(self.help['com'],self.help['admin'])
-        self.send(True, halp)
+        self.send(halp)
 
     def nia_tr(self,args):
         '''Usage: tr <from lang> <to lang> <text>
@@ -63,12 +63,12 @@ class Nia(bot):
         if tmp:
             tmp = tmp[0]
             from_l, to_l, word = tmp[0],tmp[1],tmp[2]
-            self.send(True, translated(word, to_l, from_l))
-        else: self.send(True, 'Nyaa? Bad request...')
+            self.send( translated(word, to_l, from_l))
+        else: self.send( 'Nyaa? Bad request...')
     def nia_say(self,args):
         '''Usage: say <text> 
         Send a message on behalf Bot'''
-        self.send(True, args)
+        self.send( args)
     def nia_show(self,args):
         '''Usage: show http://example.com/image.jpg
         Show a picture to chat. Works only in Gajim.'''
@@ -77,36 +77,36 @@ class Nia(bot):
             extra = '<a href="%s"><img src="%s"/></a>'%(text,text)
             self.send(False, text, extra)
         else:
-            self.send(True, 'Nyaaa? This does not link...')
+            self.send( 'Nyaaa? This does not link...')
 
     def nia_google(self, args):
         '''Search in google.com'''
         flag, text, extra = google(args,'web')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
     def nia_enwiki(self, args):
         '''Search in en.wikipedia.org'''
         flag, text, extra = google('site:http://en.wikipedia.org %s'%args,'web')
     def nia_ruwiki(self, args):
         '''Search in http://ru.wikipedia.org'''
         flag, text, extra = google('site:http://ru.wikipedia.org %s'%args,'web')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
     def nia_wa(self, args):
         '''Search in world-art.ru'''
         flag, text, extra = google('site:http://www.world-art.ru %s'%args,'web')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
     def nia_adb(self, args):
         '''Search in anidb.info'''
         flag, text, extra = google('site:http://anidb.info %s'%args,'web')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
     def nia_lurk(self, args):
         '''Search in lurkmore.ru'''
         flag, text, extra = google('site:http://lurkmore.ru/ %s'%args,'web')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
     def nia_gpic(self, args):
         '''Usage: gpic <word>
         Find a picture in google.com and show to chat. Works only in Gajim.'''
         flag, text, extra = google(args,'images')
-        self.send(flag, text, extra)
+        self.send(text, extra, flag)
 
     def _nia_version(self,args):
         nick = self.nick
@@ -136,7 +136,7 @@ class Nia(bot):
         while True:
             self.send_iq('get',to)
             
-        #self.send(True,version())
+        #self.send(version())
         #self.conn.RegisterHandler('iq',get_iq, typ='result', makefirst=1)
 
     def admin_join(self,nick,conf):
@@ -154,23 +154,29 @@ class Nia(bot):
         self.send_system(to,'offline','unavailable')
         if self.CONFS.count(conf):
             self.CONFS.remove(conf)
+
     def admin_joined(self,nick,conf):
         '''Usage: joined
         Show the list of rooms in which the bot.'''
-        return ' '.join(self.CONFS)
+        self.send(' '.join(self.CONFS))
 
     def admin_ignore(self,nick,user):
         '''Usage: ignore <user>
         Игнорировать ботом юзера.'''
-        self.ignore.append(user)
+        user = '%s/%s'%(self.to,user)
+        if self.type_f:
+            self.ignore.append(user)
         return False
 
     def admin_noignore(self,nick,user):
         '''Usage: noignore <user>
         Снять игнор с юзера'''
-        if self.ignore.count(user):
+        #user = '%s/%s'%(self.to,user)
+        for i in xrange(self.ignore.count(user)):
             self.ignore.remove(user)
-        return False
+
+    def admin_lsignore(self,nick,user):
+        self.send(' '.join(self.ignore))
 
     def admin_savecfg(self,nick,args):
         '''Usage: savecfg
