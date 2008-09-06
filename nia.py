@@ -4,28 +4,17 @@
 Nia - бот написаный на Python.
 Разработчик - apkawa@gmail.com
 
-некоторые идеи были взяты из:
-    http://paste.org.ru/?ffxty8
-    http://paste.org.ru/?9iuvw2
-    http://wiki.wjsullivan.net/collaboration.cgi/SnakeBot
-
 Лицензия - GPLv3
 '''
 from jaconn import bot
+
 import re,sys,os,time
+
 from random import randint
+import urllib,simplejson
+from xml.sax.saxutils import unescape
 
 class Nia(bot):
-    def send(self, text, extra=None, flag=True):
-        '''
-        True - chat
-        False - xml
-        '''
-        if flag:
-            self.send_chat(self.type,self.to,text)
-        else:
-            self.send_xml(self.type,self.to,text,extra)
-
     def nia_help(self,args):
         '''Lists of possible functions'''
         if args:
@@ -35,7 +24,6 @@ class Nia(bot):
                 halp = self.admin_commands[args].__doc__
             else:
                 halp = 'Nyaaa? This command does not...'
-            self.send(halp)
         else:
             halp ='''List of functions
             User command: %s
@@ -43,7 +31,7 @@ class Nia(bot):
 
             Type help <command> to learn more
             '''%(self.help['com'],self.help['admin'])
-            self.send(halp)
+        self.send(halp)
 
     def nia_tr(self,args):
         '''Usage: tr <from lang> <to lang> <text>
@@ -215,8 +203,6 @@ class Nia(bot):
 
 
 def google(word,type):
-    import urllib,simplejson
-    from xml.sax.saxutils import unescape
     def web(results):
         if results:
             url = urllib.unquote(results[0]['url'])
@@ -225,7 +211,7 @@ def google(word,type):
             content = re.sub('(<b>)|(</b>)','',results[0]['content'])
             text = '%s\n%s\n%s'%(title1,content,url)
             text = re.sub('&#39;','\'',unescape(text))
-            print text
+            #print text
 
             extra = '''<a href="%s">%s</a>
             <p>%s</p>
@@ -332,3 +318,10 @@ if __name__ == '__main__':
     nia = Nia()
     nia.online()
 
+'''
+некоторые идеи были взяты из:
+    http://paste.org.ru/?ffxty8
+    http://paste.org.ru/?9iuvw2
+    http://wiki.wjsullivan.net/collaboration.cgi/SnakeBot
+
+'''

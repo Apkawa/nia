@@ -3,9 +3,24 @@ import xmpp, inspect, re
 import ConfigParser
 
 class bot:
+    def DEBUG(self, text=None):
+        '''Режим отладки и тестирования'''
+        if self.debug:
+            self.config_file = 'nia_test.cfg'
+            print unicode(text)
+
     comm_pref = 'nia_'
     admin_comm_pref = 'admin_'
     def __init__(self):
+        self.debug = 0 
+
+        self.config_file = 'nia.cfg'
+        self.resource= 'Nia Teppelin .NET'
+        self.version = '0.666'
+        self.os = 'Windows Vista'
+
+        self.DEBUG()
+
         user, confs, ignore, alias = self.config(False)
         self.JID = user['jid']
         self.PASSWD = user['passwd']
@@ -15,22 +30,16 @@ class bot:
         self.ignore = ignore
         self.alias = alias 
 
-        self.resource= 'Nia Teppelin .NET'
-        self.version = '0.666'
-        self.os = 'Windows Vista'
-
         self.commands = {}
         self.admin_commands = {}
         self.help = {'com':[],'admin':[]}
         for (name, value) in inspect.getmembers(self):
-#            print name, value
             if inspect.ismethod(value) and name.startswith(self.comm_pref):
                 self.commands[name[len(self.comm_pref):]] = value
                 self.help['com'].append(name[len(self.comm_pref):])
             if inspect.ismethod(value) and name.startswith(self.admin_comm_pref):
                 self.admin_commands[name[len(self.admin_comm_pref):]] = value
                 self.help['admin'].append(name[len(self.admin_comm_pref):])
-        #print self.commands, self.admin_commands
         self.help = {'com':', '.join(self.help['com']),'admin':', '.join(self.help['admin'])}
 
 
@@ -48,10 +57,10 @@ class bot:
             config.set('general', 'admin', self.admin)
             config.set('general', 'ignore', ','.join(ignore))
             config.set('general', 'confs', ','.join(confs) )
-            config.write(open('nia.cfg','w'))
+            config.write(open(self.config_file,'w'))
         def config_read():
             alias = {}
-            config.read('nia.cfg')
+            config.read(self.config_file)
             user = {'jid':config.get('general','jid'),
                 'passwd':config.get('general','passwd'),
                 'nick':config.get('general','nick'),
@@ -112,12 +121,24 @@ class bot:
                 self.reconnect()
 
 
-    def send_chat(self,type,to,text):
-        ''' Отправка в чат обычного сообщения.
-        type - тип сообщения, groupchat или chat
-        to - кому отправляем
-        text - отправляемый текст'''
-        self.conn.send(xmpp.protocol.Message(to,text,type))
+    def send(self, text, extra=None, flag=True):
+        '''
+        True - chat
+        False - xml
+        '''
+        if flag:
+            self.conn.send(xmpp.protocol.Message(self.to,text,self.type))
+        else:
+            '''Отправка сообщения в форме xhtml'''
+
+            xhtml = '''
+            <html xmlns='http://jabber.org/protocol/xhtml-im'>
+            <body xml:lang='en-US' xmlns='http://www.w3.org/1999/xhtml'>
+            %s
+            </body></html>
+            '''%extra
+            
+            self.conn.send("<message to='%s' type='%s'><body>%s</body>%s</message>"%(self.to,self.type,text,xhtml))
 
     def send_system(self,to,msg,type):
         '''Отправка системного сообщения. Статусы'''
@@ -127,24 +148,13 @@ class bot:
     def XMLescape(self, text):
         return xmpp.simplexml.XMLescape(text)
 
-    def send_xml(self,type,to,text,extra):
-        '''Отправка сообщения в форме xhtml'''
-        xhtml = '''
-        <html xmlns='http://jabber.org/protocol/xhtml-im'>
-        <body xml:lang='en-US' xmlns='http://www.w3.org/1999/xhtml'>
-        %s
-        </body></html>
-        '''%extra
-        
-        self.conn.send("<message to='%s' type='%s'><body>%s</body>%s</message>"%(to,type,text,xhtml))
-
     def get_mes(self, conn, mess):
         def parse():
             if self.type_f:
                 text = re.findall('^%s[\W]{0,2}[\s]{1,3}(.*?)$'%self.NICK,self.text)
             else:
                 text = re.findall('^(.*?)$',self.text)
-            #print text
+            self.DEBUG(text)
             if text:
                 tmp = text[0].split(' ',1)
                 if len(tmp) >= 2: cmd, args = tmp[0], tmp[1]
@@ -162,28 +172,27 @@ class bot:
         self.type=mess.getType()
         self.nick=mess.getFrom()
         self.text=mess.getBody()
-        #print self.type, self.nick, self.text
-
 
         if self.type == 'groupchat':
             self.to = self.nick.getStripped()
             nick = self.nick.getResource()
             self.type_f = True
-        elif self.type == 'chat' and re.match('conference.[\w]*?.[\w]{2,3}', self.nick.getDomain()):
+        elif self.type == 'chat' and self.nick.getDomain().startswith('conference.'):
             self.to = self.nick
             nick = self.nick.getResource()
             self.type_f = False
         elif self.type == 'chat':
-            #self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
             self.to = self.nick.getStripped()
             nick = self.nick.getNode()
             self.type_f = False
 
         '''    if (user in CONFERENCES) or (user in [i+u'/'+jid.getResource() for i in CONFERENCES]) or (user in IGNORE) or (user.getStripped() in IGNORE) or (type(text)!=type(u'')):
         '''
+        self.DEBUG([self.nick,self.text,self.type])
+        self.DEBUG(mess)
         if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),'%s/%s'%(self.to,nick) ):
             pass        
-        elif re.match('^%s[\W]'%self.NICK, self.text) or not self.type_f:
+        elif self.text.startswith(self.NICK) or not self.type_f:
             cmd, args = parse()
             if self.alias.has_key(cmd):
                 cmd,args = alias(cmd, args)
@@ -193,22 +202,20 @@ class bot:
                 elif self.admin_commands.has_key(cmd):
                     if nick == self.admin.getNode() or self.to == str(self.admin).lower() :
                         self.admin_commands[cmd](self.nick,args)
-                    else: self.send_chat(self.type, self.to, '%s~ nyaaa? Access denied...'%nick)
-                else:  self.send_chat(self.type, self.to, '%s~ nyaaa? Type "help"...'%nick)
-            else:  self.send_chat(self.type, self.to, '%s~ nyaaa? Type "help"...'%nick)
+                    else: self.send('%s~ nyaaa? Access denied...'%nick)
+                else:  self.send('%s~ nyaaa? Type "help"...'%nick)
+            else: self.send('%s~ nyaaa? Type "help"...'%nick)
 
 
     def send_iq(self,_type, to):
         self.conn.send(xmpp.protocol.Iq(to=to,typ=_type ,queryNS=xmpp.NS_VERSION))
     def get_iq(self,conn,mess):
-        #print mess
         query = mess.getTag('query')
         client = '%s %s'%(query.getTagData('name'),query.getTagData('version') )
         os = query.getTagData('os')
         target = mess.getFrom().getResource()
         toversion  = '%s has client %s at %s'%(target, client, os)
         self.send(toversion)
-#        print mess.getFrom(), self.to, self.toversion
 
 
 
