@@ -9,7 +9,7 @@ Nia - бот написаный на Python.
     http://paste.org.ru/?9iuvw2
     http://wiki.wjsullivan.net/collaboration.cgi/SnakeBot
 
-Лицензия - GPL v.3
+Лицензия - GPLv3
 '''
 from jaconn import bot
 import re,sys,os,time
@@ -60,7 +60,6 @@ class Nia(bot):
         es - Spanish
         et - Estonian
         hi - Hindi
-        sa - Sanskrit
         '''
 
         tmp = re.findall('([\w]{2})[\s]*?([\w]{2})[\s]*?(.*?)$',args)
@@ -116,11 +115,19 @@ class Nia(bot):
         '''Usage: alias <cmd> = '<command, arguments>'
         Set alias'''
         print args
-        tmp = re.findall('^(.*?)[\s]=[\s]\'(.*)\'',args)
+        tmp = re.findall('^(.*?)(?:[\s]{0,})=(?:[\s]{0,})\'(.*)\'',args)
         print tmp
         if tmp:
             tmp = tmp[0]
-            self.alias[tmp[0]] = tmp[1]
+            if not self.commands.has_key(tmp[0]) and not self.alias.has_key(tmp[0]) and not self.alias.has_key(tmp[0]):
+                self.alias[tmp[0]] = tmp[1]
+                mess = 'Set alias %s = %s'%(tmp[0],tmp[1])
+            else:
+                mess = 'Nyaaa... Name alias should not overlap with existing commands and alias.'
+        else:
+            mess = 'Nyaaa... Invalid syntax. Type "help alias".'
+        self.send(mess)
+
     def nia_rmalias(self,args):
         '''Usage: rmalias <alias>
         Remove alias'''
@@ -132,37 +139,20 @@ class Nia(bot):
 
         
 
-    def _nia_version(self,args):
+    def nia_version(self,args):
+        '''Usage: version [|<Nick>]'''
         nick = self.nick
         conf = '%s@%s'%(nick.getNode(),nick.getDomain())
         self.toversion = ''
-        def get_iq(conn,mess):
-            print mess
-            query = mess.getTag('query')
-            client = '%s %s'%(query.getTagData('name'),query.getTagData('version') )
-            os = query.getTagData('os')
-            self.toversion  = 'There it %s %s at %s'%(target, client, os)
-            
-        def version():
-            query = self.query
-            client = '%s %s'%(query.getTagData('name'),query.getTagData('version') )
-            os = query.getTagData('os')
-            version  = 'There it %s %s at %s'%(target, client, os)
-            return version
-
+        args = re.findall('^(.*?)(?:|[\s])$',args)[0]
+        print args
         if not args:
             to = nick
-            target = nick.getResource()
         else:
             to = '%s/%s'%(conf,args)
-            target = args
-        print to, target
-        while True:
-            self.send_iq('get',to)
-            
-        #self.send(version())
-        #self.conn.RegisterHandler('iq',get_iq, typ='result', makefirst=1)
-
+        print to
+        self.send_iq('get',to)
+    
     def admin_join(self,nick,conf):
         '''Usage: join example@conference.example.com
         Go to room bot'''
@@ -226,6 +216,7 @@ class Nia(bot):
 
 def google(word,type):
     import urllib,simplejson
+    from xml.sax.saxutils import unescape
     def web(results):
         if results:
             url = urllib.unquote(results[0]['url'])
@@ -233,6 +224,8 @@ def google(word,type):
             title2 = results[0]['title']
             content = re.sub('(<b>)|(</b>)','',results[0]['content'])
             text = '%s\n%s\n%s'%(title1,content,url)
+            text = re.sub('&#39;','\'',unescape(text))
+            print text
 
             extra = '''<a href="%s">%s</a>
             <p>%s</p>
@@ -315,7 +308,7 @@ def translated(word,  to_l, from_l=None):
         src =  urllib.urlopen(url).read()
         convert = simplejson.loads(src)
         status = convert['responseStatus']
-        print status, type(status), convert
+        #print status, type(status), convert
         if status == 200:
             results = convert['responseData']['translatedText']
             return results
@@ -326,7 +319,7 @@ def translated(word,  to_l, from_l=None):
         src =  urllib.urlopen(url).read()
         convert = simplejson.loads(src)
         results = convert['responseData']['language']
-        print results
+        #print results
         return results
 
     transl =  transl(word, from_l, to_l)

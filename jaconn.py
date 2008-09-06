@@ -12,13 +12,15 @@ class bot:
         self.NICK= unicode(user['nick'],'utf-8')
         self.admin = xmpp.protocol.JID(user['admin'])
         self.CONFS = confs
+        self.ignore = ignore
+        self.alias = alias 
+
+        self.resource= 'Nia Teppelin .NET'
+        self.version = '0.666'
+        self.os = 'Windows Vista'
+
         self.commands = {}
         self.admin_commands = {}
-        self.ignore = ignore
-
-        self.resource= 'Nia Teppelin'
-        self.version = '0.666'
-        self.os = '.NET Windows Vista'
         self.help = {'com':[],'admin':[]}
         for (name, value) in inspect.getmembers(self):
 #            print name, value
@@ -30,7 +32,6 @@ class bot:
                 self.help['admin'].append(name[len(self.admin_comm_pref):])
         #print self.commands, self.admin_commands
         self.help = {'com':', '.join(self.help['com']),'admin':', '.join(self.help['admin'])}
-        self.alias = alias 
 
 
 
@@ -73,9 +74,10 @@ class bot:
         self.conn.connect()
         self.conn.auth(self.jid.getNode(),self.PASSWD,'nyaa~')
         self.conn.sendInitPresence()
-        #self.conn.RegisterDisconnectHandler(self.conn.reconnectAndReauth)
+        self.conn.RegisterDisconnectHandler(self.conn.reconnectAndReauth)
         self.conn.RegisterHandler('message',self.get_mes)
         self.conn.RegisterHandler('iq', self.iq_version, typ='get', ns=xmpp.NS_VERSION)
+        self.conn.RegisterHandler('iq', self.get_iq, typ='result', ns=xmpp.NS_VERSION)
 
     def iq_version(self, conn, iq):
         """Returns reply to iq:version"""
@@ -121,6 +123,7 @@ class bot:
         '''Отправка системного сообщения. Статусы'''
         print to, msg, type
         self.conn.send(xmpp.protocol.Presence(to=to,status=msg,typ=type))
+
     def XMLescape(self, text):
         return xmpp.simplexml.XMLescape(text)
 
@@ -137,8 +140,11 @@ class bot:
 
     def get_mes(self, conn, mess):
         def parse():
-            text = re.findall('^%s[\W]{0,2}[\s]{1,3}(.*?)$'%self.NICK,self.text)
-            print text
+            if self.type_f:
+                text = re.findall('^%s[\W]{0,2}[\s]{1,3}(.*?)$'%self.NICK,self.text)
+            else:
+                text = re.findall('^(.*?)$',self.text)
+            #print text
             if text:
                 tmp = text[0].split(' ',1)
                 if len(tmp) >= 2: cmd, args = tmp[0], tmp[1]
@@ -166,17 +172,18 @@ class bot:
         elif self.type == 'chat' and re.match('conference.[\w]*?.[\w]{2,3}', self.nick.getDomain()):
             self.to = self.nick
             nick = self.nick.getResource()
+            self.type_f = False
         elif self.type == 'chat':
             #self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
             self.to = self.nick.getStripped()
             nick = self.nick.getNode()
+            self.type_f = False
 
         '''    if (user in CONFERENCES) or (user in [i+u'/'+jid.getResource() for i in CONFERENCES]) or (user in IGNORE) or (user.getStripped() in IGNORE) or (type(text)!=type(u'')):
-            return
         '''
         if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),'%s/%s'%(self.to,nick) ):
             pass        
-        elif re.match('^%s[\W]'%self.NICK, self.text):
+        elif re.match('^%s[\W]'%self.NICK, self.text) or not self.type_f:
             cmd, args = parse()
             if self.alias.has_key(cmd):
                 cmd,args = alias(cmd, args)
@@ -194,15 +201,14 @@ class bot:
     def send_iq(self,_type, to):
         self.conn.send(xmpp.protocol.Iq(to=to,typ=_type ,queryNS=xmpp.NS_VERSION))
     def get_iq(self,conn,mess):
-        print mess
-        self.query = mess 
-        ''' 
+        #print mess
         query = mess.getTag('query')
         client = '%s %s'%(query.getTagData('name'),query.getTagData('version') )
         os = query.getTagData('os')
-        self._version=(client, os)
-        print self._version
-        '''
+        target = mess.getFrom().getResource()
+        toversion  = '%s has client %s at %s'%(target, client, os)
+        self.send(toversion)
+#        print mess.getFrom(), self.to, self.toversion
 
 
 
@@ -211,28 +217,6 @@ class bot:
 
 '''
 http://code.google.com/p/robocat/source/browse/trunk/start.py
-
-
-<iq from='apkawa@jabber.ru/LoR' to='apkawa@jabber.ru/LoR' xml:lang='ru' id='1856' type='result'>
-<query xmlns='jabber:iq:version'>
-<name>Gajim</name>
-<version>0.11.4.4-svn</version>
-<os>Arch Linux</os>
-</query>
-</iq>
-
-
 http://www.linux.org.ru/view-message.jsp?msgid=2591531#2591657
-
-<presence to="жабы@conference.jabber.ru/Apkawa" xml:lang="ru" type="unavailable" id="1345">
-<status>offline</status>
-</presence>
-
-<presence from='жабы@conference.jabber.ru/Apkawa' to='apkawa@jabber.ru/LoR' xml:lang='ru' type='unavailable' id='1345'>
-<status>offline</status>
-<x xmlns='http://jabber.org/protocol/muc#user'>
-<item affiliation='owner' role='none'/>
-</x>
-</presence>
 '''
 
