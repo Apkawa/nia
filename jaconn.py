@@ -6,10 +6,10 @@ class bot:
     comm_pref = 'nia_'
     admin_comm_pref = 'admin_'
     def __init__(self):
-        user, confs, ignore = self.config(False)
+        user, confs, ignore, alias = self.config(False)
         self.JID = user['jid']
         self.PASSWD = user['passwd']
-        self.NICK= user['nick']
+        self.NICK= unicode(user['nick'],'utf-8')
         self.admin = xmpp.protocol.JID(user['admin'])
         self.CONFS = confs
         self.commands = {}
@@ -30,11 +30,16 @@ class bot:
                 self.help['admin'].append(name[len(self.admin_comm_pref):])
         #print self.commands, self.admin_commands
         self.help = {'com':', '.join(self.help['com']),'admin':', '.join(self.help['admin'])}
+        self.alias = alias 
+
 
 
     def config(self,flag,confs=None,ignore=None):
         config = ConfigParser.ConfigParser()
         def config_write():
+            config.add_section('alias')
+            for key in self.alias:
+                config.set('alias', key, self.alias[key])
             config.add_section('general')
             config.set('general', 'jid', self.JID)
             config.set('general', 'passwd', self.PASSWD)
@@ -44,6 +49,7 @@ class bot:
             config.set('general', 'confs', ','.join(confs) )
             config.write(open('nia.cfg','w'))
         def config_read():
+            alias = {}
             config.read('nia.cfg')
             user = {'jid':config.get('general','jid'),
                 'passwd':config.get('general','passwd'),
@@ -51,7 +57,9 @@ class bot:
                 'admin':config.get('general','admin')}
             confs = config.get('general','confs').decode('utf-8').split(',')
             ignore = config.get('general','ignore').decode('utf-8').split(',')
-            return user, confs, ignore
+            for key in config.options('alias'):
+                alias[key] = config.get('alias',key)
+            return user, confs, ignore, alias
         if flag:
             config_write()
         else:
@@ -65,7 +73,7 @@ class bot:
         self.conn.connect()
         self.conn.auth(self.jid.getNode(),self.PASSWD,'nyaa~')
         self.conn.sendInitPresence()
-        self.conn.RegisterDisconnectHandler(self.conn.reconnectAndReauth)
+        #self.conn.RegisterDisconnectHandler(self.conn.reconnectAndReauth)
         self.conn.RegisterHandler('message',self.get_mes)
         self.conn.RegisterHandler('iq', self.iq_version, typ='get', ns=xmpp.NS_VERSION)
 
@@ -136,29 +144,42 @@ class bot:
                 if len(tmp) >= 2: cmd, args = tmp[0], tmp[1]
                 elif len(tmp) == 1: cmd, args = tmp[0], ''
                 return cmd, args
+
             else: return False, False
+        def alias(cmd, args):
+            text = ' '.join( (self.alias[cmd], args))
+            tmp = text.split(' ',1)
+            if len(tmp) >= 2: cmd, args = tmp[0], tmp[1]
+            elif len(tmp) == 1: cmd, args = tmp[0], ''
+            return cmd, args
 
         self.type=mess.getType()
         self.nick=mess.getFrom()
         self.text=mess.getBody()
-        print self.type, self.nick, self.text
+        #print self.type, self.nick, self.text
 
 
         if self.type == 'groupchat':
-            self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
+            self.to = self.nick.getStripped()
             nick = self.nick.getResource()
+            self.type_f = True
         elif self.type == 'chat' and re.match('conference.[\w]*?.[\w]{2,3}', self.nick.getDomain()):
             self.to = self.nick
             nick = self.nick.getResource()
         elif self.type == 'chat':
-            self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
+            #self.to = '%s@%s'%(self.nick.getNode(),self.nick.getDomain())
+            self.to = self.nick.getStripped()
             nick = self.nick.getNode()
 
-
-        if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),str(self.nick).encode('utf-8')):
+        '''    if (user in CONFERENCES) or (user in [i+u'/'+jid.getResource() for i in CONFERENCES]) or (user in IGNORE) or (user.getStripped() in IGNORE) or (type(text)!=type(u'')):
+            return
+        '''
+        if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),'%s/%s'%(self.to,nick) ):
             pass        
         elif re.match('^%s[\W]'%self.NICK, self.text):
             cmd, args = parse()
+            if self.alias.has_key(cmd):
+                cmd,args = alias(cmd, args)
             if cmd:
                 if self.commands.has_key(cmd):
                     self.commands[cmd](args)

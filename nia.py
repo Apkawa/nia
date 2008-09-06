@@ -7,6 +7,7 @@ Nia - бот написаный на Python.
 некоторые идеи были взяты из:
     http://paste.org.ru/?ffxty8
     http://paste.org.ru/?9iuvw2
+    http://wiki.wjsullivan.net/collaboration.cgi/SnakeBot
 
 Лицензия - GPL v.3
 '''
@@ -32,14 +33,17 @@ class Nia(bot):
                 halp = self.commands[args].__doc__
             elif self.admin_commands.has_key(args):
                 halp = self.admin_commands[args].__doc__
+            else:
+                halp = 'Nyaaa? This command does not...'
             self.send(halp)
-        halp ='''List of functions
-        User command: %s
-        Master command: %s
+        else:
+            halp ='''List of functions
+            User command: %s
+            Master command: %s
 
-        Type help <command> to learn more
-        '''%(self.help['com'],self.help['admin'])
-        self.send(halp)
+            Type help <command> to learn more
+            '''%(self.help['com'],self.help['admin'])
+            self.send(halp)
 
     def nia_tr(self,args):
         '''Usage: tr <from lang> <to lang> <text>
@@ -108,6 +112,26 @@ class Nia(bot):
         flag, text, extra = google(args,'images')
         self.send(text, extra, flag)
 
+    def nia_alias(self, args):
+        '''Usage: alias <cmd> = '<command, arguments>'
+        Set alias'''
+        print args
+        tmp = re.findall('^(.*?)[\s]=[\s]\'(.*)\'',args)
+        print tmp
+        if tmp:
+            tmp = tmp[0]
+            self.alias[tmp[0]] = tmp[1]
+    def nia_rmalias(self,args):
+        '''Usage: rmalias <alias>
+        Remove alias'''
+        del self.alias[args]
+    def nia_lsalias(self,args):
+        '''Usage: lsalias
+        List all alias'''
+        self.send('List alias:\n%s'%'\n'.join(['%s = %s'%(i,self.alias[i]) for i in self.alias]))
+
+        
+
     def _nia_version(self,args):
         nick = self.nick
         conf = '%s@%s'%(nick.getNode(),nick.getDomain())
@@ -142,8 +166,10 @@ class Nia(bot):
     def admin_join(self,nick,conf):
         '''Usage: join example@conference.example.com
         Go to room bot'''
-        self.CONFS.append(conf)
-        self.join_room((conf,))
+        if not conf in self.CONFS:
+            self.CONFS.append(conf)
+            self.join_room((conf,))
+        else: pass
 
     def admin_leave(self,nick,conf):
         '''Usage: leave example@conference.example.com
@@ -164,7 +190,7 @@ class Nia(bot):
         '''Usage: ignore <user>
         Игнорировать ботом юзера.'''
         user = '%s/%s'%(self.to,user)
-        if self.type_f:
+        if self.type_f or (user in self.ignore):
             self.ignore.append(user)
         return False
 
@@ -176,6 +202,8 @@ class Nia(bot):
             self.ignore.remove(user)
 
     def admin_lsignore(self,nick,user):
+        '''Usage: lsignore
+        Show list ignored users'''
         self.send(' '.join(self.ignore))
 
     def admin_savecfg(self,nick,args):
