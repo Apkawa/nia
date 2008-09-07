@@ -14,6 +14,8 @@ class bot:
     def __init__(self):
         self.debug = 0 
 
+        self.logging = 0
+
         self.config_file = 'nia.cfg'
         self.resource= 'Nia Teppelin .NET'
         self.version = '0.666'
@@ -173,6 +175,7 @@ class bot:
         self.nick=mess.getFrom()
         self.text=mess.getBody()
 
+        nick = self.nick.getResource()
         if self.type == 'groupchat':
             self.to = self.nick.getStripped()
             nick = self.nick.getResource()
@@ -186,8 +189,9 @@ class bot:
             nick = self.nick.getNode()
             self.type_f = False
 
-        '''    if (user in CONFERENCES) or (user in [i+u'/'+jid.getResource() for i in CONFERENCES]) or (user in IGNORE) or (user.getStripped() in IGNORE) or (type(text)!=type(u'')):
-        '''
+        if self.type_f:
+            self.LOG(self.to, nick, self.text)
+
         self.DEBUG([self.nick,self.text,self.type])
         self.DEBUG(mess)
         if self.ignore.count(self.nick) or re.match('%s/%s'%(self.to,self.NICK),'%s/%s'%(self.to,nick) ):

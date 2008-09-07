@@ -8,13 +8,22 @@ Nia - бот написаный на Python.
 '''
 from jaconn import bot
 
-import re,sys,os,time
-
+import re
 from random import randint
-import urllib,simplejson
+import urllib
+from simplejson import loads
 from xml.sax.saxutils import unescape
 
+
 class Nia(bot):
+    def LOG(self, conf, nick, body):
+        if self.logging:
+            from nia_sql import sql
+            s = sql()
+            body = re.sub('\'','',body)
+            self.DEBUG(body)
+            s.write(conf, nick, body)
+
     def nia_help(self,args):
         '''Lists of possible functions'''
         if args:
@@ -40,7 +49,6 @@ class Nia(bot):
         en - English
         ru - Russian
         ja - Japan
-        zn - Chinese
         ko - Korean
         de - German
         fr - French
@@ -102,9 +110,7 @@ class Nia(bot):
     def nia_alias(self, args):
         '''Usage: alias <cmd> = '<command, arguments>'
         Set alias'''
-        print args
         tmp = re.findall('^(.*?)(?:[\s]{0,})=(?:[\s]{0,})\'(.*)\'',args)
-        print tmp
         if tmp:
             tmp = tmp[0]
             if not self.commands.has_key(tmp[0]) and not self.alias.has_key(tmp[0]) and not self.alias.has_key(tmp[0]):
@@ -119,7 +125,8 @@ class Nia(bot):
     def nia_rmalias(self,args):
         '''Usage: rmalias <alias>
         Remove alias'''
-        del self.alias[args]
+        if self.alias.has_key(args):
+            del self.alias[args]
     def nia_lsalias(self,args):
         '''Usage: lsalias
         List all alias'''
@@ -133,12 +140,10 @@ class Nia(bot):
         conf = '%s@%s'%(nick.getNode(),nick.getDomain())
         self.toversion = ''
         args = re.findall('^(.*?)(?:|[\s])$',args)[0]
-        print args
         if not args:
             to = nick
         else:
             to = '%s/%s'%(conf,args)
-        print to
         self.send_iq('get',to)
     
     def admin_join(self,nick,conf):
@@ -166,7 +171,7 @@ class Nia(bot):
 
     def admin_ignore(self,nick,user):
         '''Usage: ignore <user>
-        Игнорировать ботом юзера.'''
+        Ignore bot user.'''
         user = '%s/%s'%(self.to,user)
         if self.type_f or (user in self.ignore):
             self.ignore.append(user)
@@ -174,8 +179,7 @@ class Nia(bot):
 
     def admin_noignore(self,nick,user):
         '''Usage: noignore <user>
-        Снять игнор с юзера'''
-        #user = '%s/%s'%(self.to,user)
+        Remove from user ignore'''
         for i in xrange(self.ignore.count(user)):
             self.ignore.remove(user)
 
@@ -186,7 +190,7 @@ class Nia(bot):
 
     def admin_savecfg(self,nick,args):
         '''Usage: savecfg
-        Сохранить текущюю конфигурацию'''
+        Save current configuration'''
         self.config(True,self.CONFS,self.ignore)
 
     def _admin_restart(self,nick,args):
@@ -197,7 +201,7 @@ class Nia(bot):
 
     def admin_exit(self,nick,args):
         '''Usage: exit
-        Отключить бота.'''
+        Poweroff bot.'''
         sys.exit()
 
 
@@ -226,15 +230,13 @@ def google(word,type):
         else: return True, 'Nyaaa... Ничего не нашла.', ''
     #http://code.google.com/apis/ajaxsearch/documentation/reference.html#_intro_fonje
     word = urllib.quote(word.encode('utf-8'))
-    #&rsz=large&
     src =  urllib.urlopen('http://ajax.googleapis.com/ajax/services/search/%s?v=1.0&q=%s&hl=ru'%(type,word)).read()
-    convert = simplejson.loads(src)
+    convert = loads(src)
     results = convert['responseData']['results']
     if type == 'web':
         return web(results)
     if type == 'images':
         return images(results)
-    #print results
 
 
 def translated(word,  to_l, from_l=None):
@@ -287,12 +289,11 @@ def translated(word,  to_l, from_l=None):
           'UKRAINIAN' : 'uk',        'URDU' : 'ur',       'UZBEK' : 'uz',
           'UIGHUR' : 'ug',           'VIETNAMESE' : 'vi'  
         }
-    import urllib,simplejson
     def transl(o_word, from_l, to_l):
         word = urllib.quote(o_word.encode('utf-8'))
         url = 'http://ajax.googleapis.com/ajax/services/language/translate?v=1.0&q=%s&langpair=%s%%7C%s'%(word, from_l, to_l)
         src =  urllib.urlopen(url).read()
-        convert = simplejson.loads(src)
+        convert = loads(src)
         status = convert['responseStatus']
         #print status, type(status), convert
         if status == 200:
@@ -303,7 +304,7 @@ def translated(word,  to_l, from_l=None):
         word = urllib.quote(word.encode('utf-8'))
         url = 'http://ajax.googleapis.com/ajax/services/language/detect?v=1.0&q=%s'%word
         src =  urllib.urlopen(url).read()
-        convert = simplejson.loads(src)
+        convert = loads(src)
         results = convert['responseData']['language']
         #print results
         return results
@@ -313,7 +314,6 @@ def translated(word,  to_l, from_l=None):
 #http://code.google.com/apis/ajaxlanguage/documentation/reference.html#_fonje_detect
 
 
-#user, confs, ignore = Nia.config(False,None,None)
 if __name__ == '__main__':
     nia = Nia()
     nia.online()

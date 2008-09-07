@@ -6,3 +6,5 @@ ignore = User1,user2
 nick = Bot
 admin = admin@jabber.com
 
+[alias]
+
