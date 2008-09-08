@@ -12,7 +12,7 @@ class bot:
     comm_pref = 'nia_'
     admin_comm_pref = 'admin_'
     def __init__(self):
-        self.debug = 0 
+        self.debug = 1 
 
         self.logging = 0
 
@@ -24,10 +24,12 @@ class bot:
         self.DEBUG()
 
         user, confs, ignore, alias = self.config(False)
+        self.DEBUG(user)
         self.JID = user['jid']
         self.PASSWD = user['passwd']
         self.NICK= unicode(user['nick'],'utf-8')
-        self.admin = xmpp.protocol.JID(user['admin'])
+        self.admin_jid = xmpp.protocol.JID(user['admin_jid'])
+        self.admin_nick = user['admin_nick']
         self.CONFS = confs
         self.ignore = ignore
         self.alias = alias 
@@ -56,7 +58,8 @@ class bot:
             config.set('general', 'jid', self.JID)
             config.set('general', 'passwd', self.PASSWD)
             config.set('general', 'nick', self.NICK)
-            config.set('general', 'admin', self.admin)
+            config.set('general', 'admin_jid', self.admin_jid)
+            config.set('general', 'admin_nick', self.admin_nick)
             config.set('general', 'ignore', ','.join(ignore))
             config.set('general', 'confs', ','.join(confs) )
             config.write(open(self.config_file,'w'))
@@ -66,7 +69,8 @@ class bot:
             user = {'jid':config.get('general','jid'),
                 'passwd':config.get('general','passwd'),
                 'nick':config.get('general','nick'),
-                'admin':config.get('general','admin')}
+                'admin_jid':config.get('general','admin_jid'),
+                'admin_nick':config.get('general','admin_nick')}
             confs = config.get('general','confs').decode('utf-8').split(',')
             ignore = config.get('general','ignore').decode('utf-8').split(',')
             for key in config.options('alias'):
@@ -204,7 +208,7 @@ class bot:
                 if self.commands.has_key(cmd):
                     self.commands[cmd](args)
                 elif self.admin_commands.has_key(cmd):
-                    if nick == self.admin.getNode() or self.to == str(self.admin).lower() :
+                    if nick == self.admin_nick or self.to == str(self.admin_jid).lower() :
                         self.admin_commands[cmd](self.nick,args)
                     else: self.send('%s~ nyaaa? Access denied...'%nick)
                 else:  self.send('%s~ nyaaa? Type "help"...'%nick)

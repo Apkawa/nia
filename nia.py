@@ -85,6 +85,7 @@ class Nia(bot):
     def nia_enwiki(self, args):
         '''Search in en.wikipedia.org'''
         flag, text, extra = google('site:http://en.wikipedia.org %s'%args,'web')
+        self.send(text, extra, flag)
     def nia_ruwiki(self, args):
         '''Search in http://ru.wikipedia.org'''
         flag, text, extra = google('site:http://ru.wikipedia.org %s'%args,'web')

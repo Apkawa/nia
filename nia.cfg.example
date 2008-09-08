@@ -4,7 +4,8 @@ jid = bot@jabber.ru/Resource
 passwd = <your passwd>
 ignore = User1,user2
 nick = Bot
-admin = admin@jabber.com
+admin_jid = admin@jabber.com
+admin_nick = adminnickinroom
 
 [alias]
 
